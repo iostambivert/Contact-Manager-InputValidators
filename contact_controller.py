@@ -46,7 +46,31 @@ class ContactController:
         except ValueError as e:
             print(f"\nError: {e}")
 
-    # todo add edit thing
+    def edit(self, id: int) -> None:
+            self._print_header(f"Edit Contact (id={id})")
+            try:
+                contact = self._service.get_contact_by_id(id)
+                print(f"Editing: {contact.get_full_name()}")
+                print("(Press Enter to keep current value)\n")
+
+                first = input(f"  First name [{contact.get_first_name()}]: ").strip()
+                last  = input(f"  Last name  [{contact.get_last_name()}]: ").strip()
+                email = input(f"  Email      [{contact.get_email()}]: ").strip()
+                phone = input(f"  Phone      [{contact.get_phone()}]: ").strip()
+
+                if first:
+                    contact.set_first_name(first)
+                if last:
+                    contact.set_last_name(last)
+                if email:
+                    contact.set_email(email)
+                if phone:
+                    contact.set_phone(phone)
+
+                self._service.update_contact(contact)
+                print(f"\nContact updated: {contact.get_full_name()}")
+            except ValueError as e:
+                print(f"\nError: {e}")
 
     def delete(self, id: int) -> None:
         self._print_header(f"Delete Contact (id={id})")
