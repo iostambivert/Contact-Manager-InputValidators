@@ -36,6 +36,10 @@ class Contact:
     def set_phone(self, phone: str) -> None:
         self._phone = phone
 
+    @property
+    def id(self) -> int:
+        return self._id
+
     def __repr__(self) -> str:
         return (
             f"Contact(id={self._id}, name={self.get_full_name()}, "

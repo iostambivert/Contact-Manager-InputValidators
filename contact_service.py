@@ -16,29 +16,36 @@ class ContactService:
         self._next_id = 1
 
     def _validate(self, first_name: str, last_name: str, email: str, phone: str):
-        if not first_name.strip() or not last_name.strip():
-            raise ValueError("First name and last name cannot be empty.")
-        if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+        if not self._validate_not_empty(first_name):
+            raise ValueError("First Name cannot be empty.")
+        if not self._validate_not_empty(last_name):
+            raise ValueError("Last Name cannot be empty.")
+        if not self._validate_not_empty(email):
+            email = "unset"
+        if not self._validate_not_empty(phone):
+            phone = "unset"
+
+        if not re.match(r"[^@]+@[^@]+\.[^@]+", email) and email != "unset":
             raise ValueError(f"Invalid email address: {email}")
-        if not phone.strip():
+        if not phone.strip() and phone != "unset":
             raise ValueError("Phone number cannot be empty.")
+
+    @staticmethod
+    def _validate_not_empty(value: str) -> bool:
+        if not value or not value.strip():
+            return False
+        else:
+            return True
 
     def _generate_id(self) -> int:
         id = self._next_id
         self._next_id += 1
         return id
 
-    @staticmethod
-    def _validate_not_empty(value: str, field_name: str) -> None:
-        if not value or not value.strip():
-            raise ValueError(f"{field_name} cannot be empty.")
-
     #  Public API
     def add_contact(self, first_name: str, last_name: str, email: str, phone: str) -> Contact:
-        self._validate_not_empty(first_name, "First name")
-        self._validate_not_empty(last_name, "Last name")
-        self._validate_not_empty(email, "Email")
-        self._validate_not_empty(phone, "Phone")
+        
+        self._validate(first_name, last_name, email, phone)
 
         contact = Contact(self._generate_id(), first_name.strip(), last_name.strip(),
                           email.strip(), phone.strip())
@@ -56,8 +63,10 @@ class ContactService:
         self._repository.delete(id)
 
     def search_by_name(self, name: str) -> List[Contact]:
-        self._validate_not_empty(name, "Search query")
-        return self._repository.find_by_name(name)
+        if not self._validate_not_empty(name):
+            raise ValueError("Search query cannot be empty")
+        else:
+            return self._repository.find_by_name(name)
 
     def get_all_contacts(self) -> List[Contact]:
         return self._repository.find_all()
