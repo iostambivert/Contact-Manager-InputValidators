@@ -1,6 +1,7 @@
 """
 contact_service.py - Business logic layer
 """
+
 import re
 from typing import List
 from contact import Contact
@@ -14,8 +15,14 @@ class ContactService:
         self._repository = repository
         self._next_id = 1
 
-    #  Internal helpers
-    
+    def _validate(self, first_name: str, last_name: str, email: str, phone: str):
+        if not first_name.strip() or not last_name.strip():
+            raise ValueError("First name and last name cannot be empty.")
+        if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+            raise ValueError(f"Invalid email address: {email}")
+        if not phone.strip():
+            raise ValueError("Phone number cannot be empty.")
+
     def _generate_id(self) -> int:
         id = self._next_id
         self._next_id += 1
