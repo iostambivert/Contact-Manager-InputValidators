@@ -1,6 +1,5 @@
 """
 test_contact_repository.py - Unit tests for InMemoryContactRepository
-Person 4: Tests & project setup
 """
 
 import sys
