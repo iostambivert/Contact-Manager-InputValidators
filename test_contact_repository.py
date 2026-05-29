@@ -12,7 +12,7 @@ from in_memory_contact_repository import InMemoryContactRepository
 
 
 def make_contact(id=1, first="Alice", last="Smith",
-                 email="alice@example.com", phone="555-0001") -> Contact:
+                 email="alice@example.com", phone="555123456") -> Contact:
     return Contact(id, first, last, email, phone)
 
 
