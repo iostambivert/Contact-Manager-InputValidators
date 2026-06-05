@@ -12,8 +12,9 @@ from in_memory_contact_repository import InMemoryContactRepository
 
 
 def make_contact(id=1, first="Alice", last="Smith",
-                 email="alice@example.com", phone="555123456") -> Contact:
-    return Contact(id, first, last, email, phone)
+                 email="alice@example.com", phone="555123456",
+                 group="Friends") -> Contact:
+    return Contact(id, first, last, email, phone, group)
 
 
 class TestInMemoryContactRepository(unittest.TestCase):
@@ -80,6 +81,38 @@ class TestInMemoryContactRepository(unittest.TestCase):
         self.assertEqual(len(results), 1)
 
     # ------------------------------------------------------------------ #
+    # find_by_phone 
+    # ------------------------------------------------------------------ #
+
+    def test_find_by_phone_match(self):
+        self.repo.save(make_contact(id=1, phone="555123456"))
+        results = self.repo.find_by_phone("555123456")
+        self.assertEqual(len(results), 1)
+
+    def test_find_by_phone_no_match(self):
+        self.repo.save(make_contact(id=1, phone="555123456"))
+        self.assertEqual(len(self.repo.find_by_phone("000000000")), 0)
+
+    # ------------------------------------------------------------------ #
+    # find_by_group  (new)
+    # ------------------------------------------------------------------ #
+
+    def test_find_by_group_match(self):
+        self.repo.save(make_contact(id=1, group="Friends"))
+        self.repo.save(make_contact(id=2, email="b@b.com", group="Work"))
+        results = self.repo.find_by_group("Friends")
+        self.assertEqual(len(results), 1)
+
+    def test_find_by_group_case_insensitive(self):
+        self.repo.save(make_contact(id=1, group="Friends"))
+        results = self.repo.find_by_group("friends")
+        self.assertEqual(len(results), 1)
+
+    def test_find_by_group_no_match(self):
+        self.repo.save(make_contact(id=1, group="Friends"))
+        self.assertEqual(len(self.repo.find_by_group("Work")), 0)
+
+    # ------------------------------------------------------------------ #
     #  delete
     # ------------------------------------------------------------------ #
 
@@ -95,6 +128,21 @@ class TestInMemoryContactRepository(unittest.TestCase):
         except Exception as e:
             self.fail(f"delete raised unexpectedly: {e}")
 
+    # ------------------------------------------------------------------ #
+    # list_groups
+    # ------------------------------------------------------------------ #
+
+    def test_list_groups_returns_unique_groups(self):
+        self.repo.save(make_contact(id=1, group="Friends"))
+        self.repo.save(make_contact(id=2, email="b@b.com", group="Work"))
+        self.repo.save(make_contact(id=3, email="c@c.com", group="Friends"))
+        groups = self.repo.list_groups()
+        self.assertIn("Friends", groups)
+        self.assertIn("Work", groups)
+        self.assertEqual(len([g for g in groups if g == "Friends"]), 1)  # no duplicates
+
+    def test_list_groups_empty_repo(self):
+        self.assertEqual(self.repo.list_groups(), [])
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
