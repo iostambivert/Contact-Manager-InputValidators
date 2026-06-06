@@ -103,4 +103,3 @@ class ContactService:
 
     def list_groups(self) -> List[str]:
         return self._repository.list_groups()
-

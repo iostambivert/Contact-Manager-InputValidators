@@ -8,7 +8,7 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 import unittest
-from in_memory_contact_repository import InMemoryContactRepository
+from sqlite_contact_repository import SqliteContactRepository
 from contact_service import ContactService
 
 
@@ -16,7 +16,7 @@ class TestContactService(unittest.TestCase):
 
     def setUp(self):
         """Create a fresh service with an in-memory repo before each test."""
-        self.repo = InMemoryContactRepository()
+        self.repo = SqliteContactRepository()
         self.service = ContactService(self.repo)
 
     # ------------------------------------------------------------------ #

@@ -1,5 +1,5 @@
 """
-test_contact_repository.py - Unit tests for InMemoryContactRepository
+test_contact_repository.py - Unit tests for SqliteContactRepository
 """
 
 import sys
@@ -8,7 +8,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 import unittest
 from contact import Contact
-from in_memory_contact_repository import InMemoryContactRepository
+from sqlite_contact_repository import SqliteContactRepository
+
 
 
 def make_contact(id=1, first="Alice", last="Smith",
@@ -17,10 +18,10 @@ def make_contact(id=1, first="Alice", last="Smith",
     return Contact(id, first, last, email, phone, group)
 
 
-class TestInMemoryContactRepository(unittest.TestCase):
+class TestSqliteContactRepository(unittest.TestCase):
 
     def setUp(self):
-        self.repo = InMemoryContactRepository()
+        self.repo = SqliteContactRepository()
 
     # ------------------------------------------------------------------ #
     #  save / find_by_id
