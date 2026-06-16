@@ -112,8 +112,9 @@ class UiWindow:
         self.delete_action.triggered.connect(lambda: self._handlers["delete"]())
         self.refresh_action.triggered.connect(lambda: self._handlers["refresh"]())
 
-        # search enters -> delegate to app
+        # search -> delegate to app
         self.search_line.returnPressed.connect(lambda: self._handlers["query"](self.search_mode.currentData(), self.search_line.text().strip()))
+        self.search_line.textChanged.connect(lambda text: self._handlers["query"](self.search_mode.currentData(), text.strip()))
 
         # selection -> preview
         self.table.currentItemChanged.connect(self._on_selection_changed)

@@ -66,6 +66,10 @@ class GuiController:
             self.refresh_list()
 
     def query(self, query_mode: str, text: str) -> None:
+        if not text or not text.strip():
+            # empty search > show all
+            self.refresh_list()
+            return
         results = self.service.query_contacts(query_mode, text)
         self.view.clear_list()
         for c in results:
