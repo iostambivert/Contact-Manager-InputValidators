@@ -72,6 +72,48 @@ class ContactService:
             raise ValueError(f"Contact with id={id} not found.")
         return contact
 
+    def query_contacts(self, query_mode: str, text: str) -> List[Contact]:
+        q = text.strip()
+        if not self._validate_not_empty(q):
+            return []
+
+        mode = query_mode or "name"
+        mode = mode.lower()
+        if mode == "name":
+            return self._repository.find_by_name(q)
+        if mode == "first":
+            # repository has no find_by_first; filter in-memory
+            return [c for c in self._repository.find_all() if q.lower() in c.get_first_name().lower()]
+        if mode == "last":
+            return [c for c in self._repository.find_all() if q.lower() in c.get_last_name().lower()]
+        if mode == "email":
+            return [c for c in self._repository.find_all() if q.lower() in c.get_email().lower()]
+        if mode == "number" or mode == "phone":
+            return self._repository.find_by_phone(q)
+        if mode == "group":
+            return self._repository.find_by_group(q)
+
+        # fallback: full name search
+        return self._repository.find_by_name(q)
+
+
+    def get_contacts_sorted_by(self, category_key: str) -> List[Contact]:
+        key = (category_key or "id").lower()
+        allc = list(self._repository.find_all())
+        if key in ("id",):
+            return sorted(allc, key=lambda c: (c.get_id() or 0))
+        if key in ("first", "first_name"):
+            return sorted(allc, key=lambda c: (c.get_first_name() or "").lower())
+        if key in ("last", "last_name"):
+            return sorted(allc, key=lambda c: (c.get_last_name() or "").lower())
+        if key in ("email",):
+            return sorted(allc, key=lambda c: (c.get_email() or "").lower())
+        if key in ("phone", "number"):
+            return sorted(allc, key=lambda c: (c.get_phone() or "").lower())
+        if key in ("group",):
+            return sorted(allc, key=lambda c: (c.get_group() or "").lower())
+        return allc
+
     def list_groups(self) -> List[str]:
         return self._repository.list_groups()
 
