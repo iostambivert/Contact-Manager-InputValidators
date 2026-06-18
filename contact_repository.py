@@ -40,3 +40,6 @@ class ContactRepository(ABC):
     def ensure_group(self, group: str) -> int:
         pass
 
+    @abstractmethod
+    def delete_group(self, group: str) -> None:
+        pass

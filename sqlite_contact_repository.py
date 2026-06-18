@@ -2,6 +2,10 @@ import sqlite3
 from typing import List, Optional
 from contact_repository import ContactRepository
 from contact import Contact
+from rapidfuzz import fuzz, process
+
+FUZZY_THRESHOLD = 40
+MAX_RESULTS = 200
 
 CREATE_GROUPS_TABLE = """
 CREATE TABLE IF NOT EXISTS groups (
@@ -61,8 +65,27 @@ class SqliteContactRepository(ContactRepository):
             cur = self._conn.execute("INSERT INTO groups (name) VALUES (?)", (group,))
             return cur.lastrowid
 
+    def delete_group(self, group: str) -> None:
+        # do nothing for 'ungrouped'
+        g = group.strip()
+        if not g or g.lower() == "ungrouped":
+            return
+        # find target id
+        cur = self._conn.execute("SELECT id FROM groups WHERE lower(name)=lower(?)", (g,))
+        row = cur.fetchone()
+        if not row:
+            return
+        target_id = row["id"]
+        un_id = self.ensure_group("ungrouped")
+        with self._conn:
+            self._conn.execute("UPDATE contacts SET group_id = ? WHERE group_id = ?", (un_id, target_id)) # move contacts to ungrouped
+            self._conn.execute("DELETE FROM groups WHERE id = ?", (target_id,)) # delete the group
+
     def _group_id_for(self, group: str) -> int:
         return self.ensure_group(group)
+
+    def _normalize(self, string: Optional[str]) -> str:
+        return (str(string) if string is not None else "").strip().lower()
 
     def find_by_id(self, id: int) -> Optional[Contact]:
         cur = self._conn.execute("SELECT * FROM contacts WHERE id = ?", (id,))
@@ -74,10 +97,26 @@ class SqliteContactRepository(ContactRepository):
         return [self._row_to_contact(r) for r in cur.fetchall()]
 
     def find_by_name(self, name: str) -> List[Contact]:
-        pattern = f"%{name}%"
+        q = self._normalize(name)
+        if not q:
+            return []
+        candidates = []
+        for c in self.find_all():
+            full = f"{c.get_first_name() or ''} {c.get_last_name() or ''}"
+            full_normal = self._normalize(full)
+            score = fuzz.token_sort_ratio(q, full_normal)
+            if score >= FUZZY_THRESHOLD:
+                candidates.append((score, c))
+        candidates.sort(key=lambda x: x[0], reverse=True)
+        return [c for _, c in candidates[:MAX_RESULTS]]
+
+    def find_by_email(self, email: str) -> List[Contact]:
+        e = (email or "").strip()
+        if not e:
+            return []
+        pattern = f"%{e}%"
         cur = self._conn.execute(
-            "SELECT c.* FROM contacts c JOIN groups g ON c.group_id=g.id "
-            "WHERE lower(c.first_name || ' ' || c.last_name) LIKE lower(?) ORDER BY c.id",
+            "SELECT * FROM contacts WHERE lower(email) LIKE lower(?) ORDER BY id",
             (pattern,)
         )
         return [self._row_to_contact(r) for r in cur.fetchall()]
@@ -98,6 +137,22 @@ class SqliteContactRepository(ContactRepository):
             (group.strip(),)
         )
         return [self._row_to_contact(r) for r in cur.fetchall()]
+
+    def find_by_group_fuzzy(self, group: str) -> List[Contact]:
+        g = self._normalize(group)
+        if not g:
+            return []
+
+        candidates = []
+        for c in self.find_all():
+            grp = (c.get_group() or "ungrouped")
+            grp_normal = self._normalize(grp)
+            score = fuzz.token_sort_ratio(g, grp_normal)
+            if score >= FUZZY_THRESHOLD:
+                candidates.append((score, c))
+        candidates.sort(key=lambda x: x[0], reverse=True)
+        return [c for _, c in candidates[:MAX_RESULTS]]
+
 
     def save(self, contact: Contact) -> None:
         group_id = self._group_id_for(contact.get_group() or "ungrouped")

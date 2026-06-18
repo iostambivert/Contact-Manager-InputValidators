@@ -48,23 +48,13 @@ class ContactService:
             raise ValueError(f"Contact with id={id} not found.")
         self._repository.delete(id)
 
-    def search_by_name(self, name: str) -> List[Contact]:
-        if not self._validate_not_empty(name):
-            raise ValueError("Search query cannot be empty")
-        return self._repository.find_by_name(name)
-
-    def search_by_phone(self, phone: str) -> List[Contact]:
-        if not self._validate_not_empty(phone):
-            raise ValueError("Search query cannot be empty")
-        return self._repository.find_by_phone(phone)
-
-    def search_by_group(self, group: str) -> List[Contact]:
-        if not self._validate_not_empty(group):
-            raise ValueError("Search query cannot be empty")
-        return self._repository.find_by_group(group)
-
     def get_all_contacts(self) -> List[Contact]:
         return self._repository.find_all()
+
+    def delete_group(self, group: str) -> None:
+        if not group or not group.strip():
+            raise ValueError("Group name required.")
+        self._repository.delete_group(group.strip())
 
     def get_contact_by_id(self, id: int) -> Contact:
         contact = self._repository.find_by_id(id)
@@ -81,17 +71,14 @@ class ContactService:
         mode = mode.lower()
         if mode == "name":
             return self._repository.find_by_name(q)
-        if mode == "first":
-            # repository has no find_by_first; filter in-memory
-            return [c for c in self._repository.find_all() if q.lower() in c.get_first_name().lower()]
-        if mode == "last":
-            return [c for c in self._repository.find_all() if q.lower() in c.get_last_name().lower()]
         if mode == "email":
-            return [c for c in self._repository.find_all() if q.lower() in c.get_email().lower()]
+            return self._repository.find_by_email(q)
         if mode == "number" or mode == "phone":
             return self._repository.find_by_phone(q)
         if mode == "group":
             return self._repository.find_by_group(q)
+        if mode == "group_fuzzy":
+            return self._repository.find_by_group_fuzzy(q)
 
         # fallback: full name search
         return self._repository.find_by_name(q)
