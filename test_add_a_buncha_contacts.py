@@ -53,4 +53,3 @@ def main(count=1000, db_path="contacts.db"):
 
 if __name__ == "__main__":
     main(count=1000)
-

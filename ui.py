@@ -9,7 +9,8 @@ class QueryMode(str, Enum):
     LAST = "last"
     EMAIL = "email"
     NUMBER = "number"
-    GROUP = "group"
+    GROUP = "group_fuzzy"
+    GROUP_REAL = "group"
 
 class UiWindow:
     def __init__(self):
@@ -29,10 +30,11 @@ class UiWindow:
         self.toolbar.setIconSize(QtCore.QSize(18, 18))
         self.window.addToolBar(QtCore.Qt.ToolBarArea.TopToolBarArea, self.toolbar)
         self.add_action = QtGui.QAction(QtGui.QIcon.fromTheme("list-add"), "Add", self.window)
+        self.group_action = QtGui.QAction(QtGui.QIcon.fromTheme("folder"), "Manage Groups", self.window)
         self.edit_action = QtGui.QAction(QtGui.QIcon.fromTheme("document-edit"), "Edit", self.window)
         self.delete_action = QtGui.QAction(QtGui.QIcon.fromTheme("user-trash"), "Delete", self.window)
         self.refresh_action = QtGui.QAction(QtGui.QIcon.fromTheme("view-refresh"), "Refresh", self.window)
-        for a in (self.add_action, self.edit_action, self.delete_action, self.refresh_action):
+        for a in (self.add_action, self.group_action, self.edit_action, self.delete_action, self.refresh_action):
             self.toolbar.addAction(a)
 
         # header: title, search type dropdown , and search line
@@ -108,6 +110,7 @@ class UiWindow:
 
         # wire toolbar
         self.add_action.triggered.connect(lambda: self._handlers["add"]())
+        self.group_action.triggered.connect(lambda: self._handlers["groups_manage"]())
         self.edit_action.triggered.connect(lambda: self._handlers["edit"]())
         self.delete_action.triggered.connect(lambda: self._handlers["delete"]())
         self.refresh_action.triggered.connect(lambda: self._handlers["refresh"]())
@@ -130,13 +133,14 @@ class UiWindow:
 
     def register_handlers(self,
                           on_add: Callable[[], None],
+                          on_groups_manage: Callable[[], None],
                           on_edit: Callable[[], None],
                           on_delete: Callable[[], None],
                           on_refresh: Callable[[], None],
                           on_query: Callable[[str, str], None],
                           on_request_sorted: Callable[[str], None]) -> None:
         self._handlers.update({
-            "add": on_add, "edit": on_edit, "delete": on_delete,
+            "add": on_add, "groups_manage": on_groups_manage, "edit": on_edit, "delete": on_delete,
             "refresh": on_refresh, "query": on_query, "request_sorted": on_request_sorted
         })
 
@@ -255,3 +259,70 @@ class ContactDialog(QtWidgets.QDialog):
         phone = self.phone.text().strip() or "unset"
         group = getattr(self, "_chosen_group", self.group_combo.currentText())
         return (self.first.text().strip(), self.last.text().strip(), email, phone, group)
+
+class GroupDialog(QtWidgets.QDialog):
+    def __init__(self, parent=None, groups: Optional[List[str]] = None):
+        super().__init__(parent)
+        self.setWindowTitle("Managerize Groups")
+        self.resize(580, 380)
+        self._groups = groups or []
+
+        layout = QtWidgets.QVBoxLayout(self)
+
+        # group selector row
+        row = QtWidgets.QHBoxLayout()
+        layout.addLayout(row)
+        row.addWidget(QtWidgets.QLabel("Group:"))
+        self.group_combo = QtWidgets.QComboBox()
+        self.group_combo.addItems(self._groups)
+        row.addWidget(self.group_combo, stretch=1)
+
+        # warning label
+        self.warning_label = QtWidgets.QLabel("")
+        self.warning_label.setWordWrap(True)
+        self.warning_label.setStyleSheet("color: #c22222;")
+        layout.addWidget(self.warning_label)
+
+        # contacts list
+        self.contacts_list = QtWidgets.QListWidget()
+        self.contacts_list.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.NoSelection)
+        layout.addWidget(self.contacts_list, stretch=1)
+
+        # buttons
+        btns = QtWidgets.QDialogButtonBox()
+        self.delete_btn = QtWidgets.QPushButton("Delete")
+        self.delete_btn.setObjectName("primary")
+        self.cancel_btn = QtWidgets.QPushButton("Cancel")
+        btns.addButton(self.delete_btn, QtWidgets.QDialogButtonBox.ButtonRole.AcceptRole)
+        btns.addButton(self.cancel_btn, QtWidgets.QDialogButtonBox.ButtonRole.RejectRole)
+        layout.addWidget(btns)
+
+        btns.accepted.connect(self.accept)
+        btns.rejected.connect(self.reject)
+
+    def selected_group(self) -> Optional[str]:
+        return self.group_combo.currentText() if self.group_combo.count() > 0 else None
+
+    def set_groups(self, groups: List[str]) -> None:
+        self.group_combo.clear()
+        self.group_combo.addItems(groups or [])
+        # update contacts view for first item
+        self._update_contacts_display([])
+
+    def set_contacts(self, contacts: List[object]) -> None:
+            self._update_contacts_display(contacts)
+
+    def _update_contacts_display(self, contacts: List[object]) -> None:
+        self.contacts_list.clear()
+        for c in contacts:
+            try:
+                text = f"[{c.get_id()}] {c.get_full_name()}"
+            except Exception:
+                # fall back to str
+                text = str(c)
+            self.contacts_list.addItem(text)
+
+        if contacts:
+            self.warning_label.setText("Warning: these contacts will become ungrouped")
+        else:
+            self.warning_label.setText("Are you sure you want to delete this empty group?")

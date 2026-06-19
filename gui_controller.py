@@ -3,7 +3,7 @@ from typing import Optional
 from PyQt6 import QtWidgets, QtCore
 from contact import Contact
 from contact_service import ContactService
-from ui import UiWindow, ContactDialog, QueryMode
+from ui import UiWindow, ContactDialog, GroupDialog, QueryMode
 
 class GuiController:
     def __init__(self, service: ContactService, view: UiWindow):
@@ -14,6 +14,7 @@ class GuiController:
     def _wire_view_handlers(self) -> None:
         self.view.register_handlers(
             on_add=self.add_contact,
+            on_groups_manage=self.manage_groups,
             on_edit=self.edit_selected,
             on_delete=self.delete_selected,
             on_refresh=self.refresh_list,
@@ -32,6 +33,33 @@ class GuiController:
             first, last, email, phone, group = dlg.values()
             c = self.service.add_contact(first, last, email, phone, group)
             self.view.add_contact_item(c)
+
+    def manage_groups(self) -> None:
+        groups = self.service.list_groups()
+        if not groups:
+            QtWidgets.QMessageBox.information(self.view.window, "No groups", "There are no groups to delete.")
+            return
+
+        dlg = GroupDialog(parent=self.view.window, groups=groups)
+        # initial contacts for selected group
+        current = dlg.selected_group()
+        if current:
+            contacts = self.service.query_contacts("group", current)
+            dlg._update_contacts_display(contacts)
+        # update contacts when selection changes
+        dlg.group_combo.currentTextChanged.connect(lambda grp: dlg.set_contacts(self.service.query_contacts("group", grp)))
+
+        if dlg.exec():
+            group_to_delete = dlg.selected_group()
+            if not group_to_delete:
+                return
+            # confirm already shown in dialog then delete via service
+            try:
+                self.service.delete_group(group_to_delete)
+                QtWidgets.QMessageBox.information(self.view.window, "Group deleted", f"Group '{group_to_delete}' deleted. Contacts moved to 'ungrouped'.")
+                self.refresh_list()
+            except Exception as e:
+                QtWidgets.QMessageBox.warning(self.view.window, "Error", str(e))
 
     def edit_selected(self) -> None:
         item = self.view.current_item()
