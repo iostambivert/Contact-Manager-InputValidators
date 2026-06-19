@@ -3,6 +3,12 @@ from typing import List, Optional
 from contact import Contact
 from contact_repository import ContactRepository
 
+class InvalidEmailError(Exception):
+    pass
+
+class InvalidPhoneError(Exception):
+    pass
+
 class ContactService:
     def __init__(self, repository: ContactRepository):
         self._repository = repository
@@ -17,7 +23,9 @@ class ContactService:
         phone_norm = phone.strip() if phone and phone.strip() else "unset"
 
         if email_norm != "unset" and not re.match(r"[^@]+@[^@]+\.[^@]+", email_norm):
-            raise ValueError(f"Invalid email address: {email_norm}")
+            raise InvalidEmailError("Invalid email format")
+        if phone_norm != "unset" and not re.match(r'^(?:\d{1,15})?$', phone_norm):
+            raise InvalidPhoneError("Invalid phone number format")
 
         return email_norm, phone_norm
 

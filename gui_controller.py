@@ -2,7 +2,7 @@
 from typing import Optional
 from PyQt6 import QtWidgets, QtCore
 from contact import Contact
-from contact_service import ContactService
+from contact_service import ContactService, InvalidEmailError, InvalidPhoneError
 from ui import UiWindow, ContactDialog, GroupDialog, QueryMode
 
 class GuiController:
@@ -31,7 +31,14 @@ class GuiController:
         dlg = ContactDialog(parent=self.view.window, title="Add Contact", groups=self.service.list_groups())
         if dlg.exec():
             first, last, email, phone, group = dlg.values()
-            c = self.service.add_contact(first, last, email, phone, group)
+            try:
+                c = self.service.add_contact(first, last, email, phone, group)
+            except InvalidEmailError:
+                QtWidgets.QMessageBox.warning(None, "Validation", "Please enter a valid email address.")
+                return
+            except InvalidPhoneError:
+                QtWidgets.QMessageBox.warning(None, "Validation", "Please enter a valid Phone number.")
+                return
             self.view.add_contact_item(c)
 
     def manage_groups(self) -> None:

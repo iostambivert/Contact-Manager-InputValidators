@@ -252,8 +252,8 @@ class ContactDialog(QtWidgets.QDialog):
             self._chosen_group = text.strip() if ok and text.strip() else "ungrouped"
         else:
             self._chosen_group = self.group_combo.currentText()
-        self.accept()
-
+        self.accept()  
+            
     def values(self) -> Tuple[str, str, str, str, str]:
         email = self.email.text().strip() or "unset"
         phone = self.phone.text().strip() or "unset"
